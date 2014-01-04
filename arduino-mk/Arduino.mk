@@ -19,7 +19,7 @@
 #
 # Original Arduino adaptation by mellis, eighthave, oli.keller
 #
-# Current version: 0.12.0
+# Current version: 1.1.0
 #
 # Refer to HISTORY.md file for complete history of changes
 #
@@ -127,23 +127,8 @@
 #
 # Included libraries are built in the build-{BOARD_TAG}/libs subdirectory.
 #
-# Besides make upload you can also
-#   make             - no upload
-#   make clean       - remove all our dependencies
-#   make depends     - update dependencies
-#   make reset       - reset the Arduino by tickling DTR on the serial port
-#   make raw_upload  - upload without first resetting
-#   make show_boards - list all the boards defined in boards.txt
-#   make monitor     - connect to the Arduino's serial port
-#   make size        - show the size of the compiled output (relative to
-#                      resources, if you have a patched avr-size)
-#   make disasm      - generate a .lss file in build-cli that contains
-#                      disassembly of the compiled file interspersed
-#                      with your original source code.
-#   make verify_size - Verify that the size of the final file is less than
-#   				   the capacity of the micro controller.
-#   make eeprom      - upload the eep file
-#	make raw_eeprom  - upload the eep file without first resetting
+# Besides make upload, there are a couple of other targets that are available.
+# Do make help to get the complete list of targets and their description
 #
 ########################################################################
 #
@@ -195,6 +180,40 @@
 #
 #
 ########################################################################
+#
+# ALTERNATIVE CORES
+#
+# To use alternative cores for platforms such as ATtiny, you need to
+# specify a few more variables, depending on the core in use.
+#
+# The HLT (attiny-master) core can be used just by specifying
+# ALTERNATE_CORE, assuming your core is in your ~/sketchbook/hardware
+# directory. For example:
+#
+# ISP_PORT           = /dev/ttyACM0
+# BOARD_TAG          = attiny85
+# ALTERNATE_CORE     = attiny-master
+#
+# To use the more complex arduino-tiny and TinyCore2 cores, you must
+# also set ARDUINO_CORE_PATH and ARDUINO_VAR_PATH to the core
+# directory, as these cores essentially replace the main Arduino core.
+# For example:
+#
+# ISP_PORT          = /dev/ttyACM0
+# BOARD_TAG         = attiny85at8
+# ALTERNATE_CORE    = arduino-tiny
+# ARDUINO_VAR_PATH  = ~/sketchbook/hardware/arduino-tiny/cores/tiny
+# ARDUINO_CORE_PATH = ~/sketchbook/hardware/arduino-tiny/cores/tiny
+#
+# or....
+#
+# ISP_PORT          = /dev/ttyACM0
+# BOARD_TAG         = attiny861at8
+# ALTERNATE_CORE    = tiny2
+# ARDUINO_VAR_PATH  = ~/sketchbook/hardware/tiny2/cores/tiny
+# ARDUINO_CORE_PATH = ~/sketchbook/hardware/tiny2/cores/tiny
+#
+########################################################################
 
 arduino_output =
 # When output is not suppressed and we're in the top-level makefile,
@@ -210,7 +229,6 @@ endif
 
 ########################################################################
 # Makefile distribution path
-#
 
 ifndef ARDMK_DIR
     # presume it's a level above the path to our own file
@@ -223,10 +241,12 @@ endif
 
 ifneq ($(wildcard $(ARDMK_DIR)/arduino-mk/Common.mk),)
     # git checkout
+    ARDMK_FILE = $(ARDMK_DIR)/arduino-mk/arduino.mk
     include $(ARDMK_DIR)/arduino-mk/Common.mk
 else
     ifneq ($(wildcard $(ARDMK_DIR)/Common.mk),)
         # package install
+        ARDMK_FILE = $(ARDMK_DIR)/arduino.mk
         include $(ARDMK_DIR)/Common.mk
     endif
 endif
@@ -246,8 +266,8 @@ else
 endif
 
 ########################################################################
-#
 # Arduino Directory
+
 ifndef ARDUINO_DIR
     AUTO_ARDUINO_DIR := $(firstword \
         $(call dir_if_exists,/usr/share/arduino) \
@@ -263,15 +283,15 @@ else
 endif
 
 ########################################################################
-#
 # Default TARGET to pwd (ex Daniele Vergini)
+
 ifndef TARGET
     TARGET  = $(notdir $(CURDIR))
 endif
 
 ########################################################################
-#
 # Arduino version number
+
 ifndef ARDUINO_VERSION
     # Remove all the decimals, and right-pad with zeros, and finally grab the first 3 bytes.
     # Works for 1.0 and 1.0.1
@@ -290,8 +310,6 @@ endif
 
 ########################################################################
 # Arduino Sketchbook folder
-#
-
 
 ifndef ARDUINO_SKETCHBOOK
     ifndef ARDUINO_PREFERENCES_PATH
@@ -321,12 +339,11 @@ ifndef ARDUINO_SKETCHBOOK
         $(call show_config_variable,ARDUINO_SKETCHBOOK,[DEFAULT])
     endif
 else
-    $(call show_config_variable,ARDUINO_SKETCHBOOK)
+    $(call show_config_variable,ARDUINO_SKETCHBOOK,[USER])
 endif
 
 ########################################################################
 # Arduino and system paths
-#
 
 ifndef CC_NAME
 CC_NAME      = avr-gcc
@@ -460,7 +477,7 @@ endif
 
 ########################################################################
 # Miscellaneous
-#
+
 ifndef USER_LIB_PATH
     USER_LIB_PATH = $(ARDUINO_SKETCHBOOK)/libraries
     $(call show_config_variable,USER_LIB_PATH,[DEFAULT],(in user sketchbook))
@@ -468,10 +485,9 @@ else
     $(call show_config_variable,USER_LIB_PATH,[USER])
 endif
 
-
 ########################################################################
 # boards.txt parsing
-#
+
 ifndef BOARD_TAG
     BOARD_TAG   = uno
     $(call show_config_variable,BOARD_TAG,[DEFAULT])
@@ -484,7 +500,7 @@ endif
 
 ifndef PARSE_BOARD
     # result = $(call READ_BOARD_TXT, 'boardname', 'parameter')
-    PARSE_BOARD = $(shell grep $(1).$(2) $(BOARDS_TXT) | cut -d = -f 2 )
+    PARSE_BOARD = $(shell grep -v "^\#" $(BOARDS_TXT) | grep $(1).$(2) | cut -d = -f 2 )
 endif
 
 # If NO_CORE is set, then we don't have to parse boards.txt file
@@ -545,6 +561,14 @@ ifeq ($(strip $(NO_CORE)),)
         ISP_EXT_FUSE = $(call PARSE_BOARD,$(BOARD_TAG),bootloader.extended_fuses)
     endif
 
+    ifndef BOOTLOADER_PATH
+        BOOTLOADER_PATH = $(call PARSE_BOARD,$(BOARD_TAG),bootloader.path)
+    endif
+
+    ifndef BOOTLOADER_FILE
+        BOOTLOADER_FILE = $(call PARSE_BOARD,$(BOARD_TAG),bootloader.file)
+    endif
+
     ifndef ISP_LOCK_FUSE_POST
         ISP_LOCK_FUSE_POST = $(call PARSE_BOARD,$(BOARD_TAG),bootloader.lock_bits)
     endif
@@ -563,10 +587,9 @@ else
     $(call show_config_variable,OBJDIR,[USER])
 endif
 
-
 ########################################################################
 # Reset
-#
+
 ifndef RESET_CMD
     ifneq ($(CATERINA),)
        RESET_CMD = $(ARDMK_PATH)/ard-reset-arduino --caterina \
@@ -583,10 +606,9 @@ else
     ERROR_ON_CATERINA =
 endif
 
-
 ########################################################################
 # Local sources
-#
+
 LOCAL_C_SRCS    ?= $(wildcard *.c)
 LOCAL_CPP_SRCS  ?= $(wildcard *.cpp)
 LOCAL_CC_SRCS   ?= $(wildcard *.cc)
@@ -630,7 +652,7 @@ ifeq ($(strip $(NO_CORE)),)
             $(call show_config_info,NO_CORE_MAIN_CPP set so core library will not include main.cpp,[MANUAL])
         endif
 
-        CORE_OBJ_FILES  = $(CORE_C_SRCS:.c=.o) $(CORE_CPP_SRCS:.cpp=.o)
+        CORE_OBJ_FILES  = $(CORE_C_SRCS:.c=.o) $(CORE_CPP_SRCS:.cpp=.o) $(CORE_AS_SRCS:.S=.o)
         CORE_OBJS       = $(patsubst $(ARDUINO_CORE_PATH)/%,  \
                 $(OBJDIR)/%,$(CORE_OBJ_FILES))
     endif
@@ -640,22 +662,24 @@ endif
 
 ########################################################################
 # Determine ARDUINO_LIBS automatically
-#
+
 ifndef ARDUINO_LIBS
     # automatically determine included libraries
     ARDUINO_LIBS += $(filter $(notdir $(wildcard $(ARDUINO_DIR)/libraries/*)), \
         $(shell sed -ne "s/^ *\# *include *[<\"]\(.*\)\.h[>\"]/\1/p" $(LOCAL_SRCS)))
     ARDUINO_LIBS += $(filter $(notdir $(wildcard $(ARDUINO_SKETCHBOOK)/libraries/*)), \
         $(shell sed -ne "s/^ *\# *include *[<\"]\(.*\)\.h[>\"]/\1/p" $(LOCAL_SRCS)))
+    ARDUINO_LIBS += $(filter $(notdir $(wildcard $(USER_LIB_PATH)/*)), \
+        $(shell sed -ne "s/^ *\# *include *[<\"]\(.*\)\.h[>\"]/\1/p" $(LOCAL_SRCS)))
 endif
 
 ########################################################################
 # Serial monitor (just a screen wrapper)
-#
+
 # Quite how to construct the monitor command seems intimately tied
 # to the command we're using (here screen). So, read the screen docs
 # for more information (search for 'character special device').
-#
+
 ifeq ($(strip $(NO_CORE)),)
     ifndef MONITOR_BAUDRATE
         ifeq ($(words $(LOCAL_PDE_SRCS) $(LOCAL_INO_SRCS)), 1)
@@ -679,11 +703,11 @@ ifeq ($(strip $(NO_CORE)),)
 endif
 
 ########################################################################
-# Include file to use for old .pde files
-#
+# Include Arduino Header file
+
 ifndef ARDUINO_HEADER
-    # We should check for Arduino version, if the file is .pde because a
-    # .pde file might be used in Arduino 1.0
+    # We should check for Arduino version, not just the file extension
+    # because, a .pde file can be used in Arduino 1.0 as well
     ifeq ($(shell expr $(ARDUINO_VERSION) '<' 100), 1)
         ARDUINO_HEADER=WProgram.h
     else
@@ -693,7 +717,6 @@ endif
 
 ########################################################################
 # Rules for making stuff
-#
 
 # The name of the main targets
 TARGET_HEX = $(OBJDIR)/$(TARGET).hex
@@ -714,16 +737,16 @@ NM      = $(AVR_TOOLS_PATH)/$(NM_NAME)
 REMOVE  = rm -rf
 MV      = mv -f
 CAT     = cat
-ECHO    = echo
+ECHO    = printf
 MKDIR   = mkdir -p
 
 # General arguments
-USER_LIBS     = $(wildcard $(patsubst %,$(USER_LIB_PATH)/%,$(ARDUINO_LIBS)))
-USER_LIB_NAMES= $(patsubst $(USER_LIB_PATH)/%,%,$(USER_LIBS))
+USER_LIBS      = $(wildcard $(patsubst %,$(USER_LIB_PATH)/%,$(ARDUINO_LIBS)))
+USER_LIB_NAMES = $(patsubst $(USER_LIB_PATH)/%,%,$(USER_LIBS))
 
 # Let user libraries override system ones.
-SYS_LIBS      = $(wildcard $(patsubst %,$(ARDUINO_LIB_PATH)/%,$(filter-out $(USER_LIB_NAMES),$(ARDUINO_LIBS))))
-SYS_LIB_NAMES = $(patsubst $(ARDUINO_LIB_PATH)/%,%,$(SYS_LIBS))
+SYS_LIBS       = $(wildcard $(patsubst %,$(ARDUINO_LIB_PATH)/%,$(filter-out $(USER_LIB_NAMES),$(ARDUINO_LIBS))))
+SYS_LIB_NAMES  = $(patsubst $(ARDUINO_LIB_PATH)/%,%,$(SYS_LIBS))
 
 # Error here if any are missing.
 LIBS_NOT_FOUND = $(filter-out $(USER_LIB_NAMES) $(SYS_LIB_NAMES),$(ARDUINO_LIBS))
@@ -731,21 +754,21 @@ ifneq (,$(strip $(LIBS_NOT_FOUND)))
     $(error The following libraries specified in ARDUINO_LIBS could not be found (searched USER_LIB_PATH and ARDUINO_LIB_PATH): $(LIBS_NOT_FOUND))
 endif
 
-SYS_LIBS     := $(wildcard $(SYS_LIBS) $(addsuffix /utility,$(SYS_LIBS)))
-USER_LIBS    := $(wildcard $(USER_LIBS) $(addsuffix /utility,$(USER_LIBS)))
-SYS_INCLUDES  = $(patsubst %,-I%,$(SYS_LIBS))
-USER_INCLUDES = $(patsubst %,-I%,$(USER_LIBS))
-LIB_C_SRCS    = $(wildcard $(patsubst %,%/*.c,$(SYS_LIBS)))
-LIB_CPP_SRCS  = $(wildcard $(patsubst %,%/*.cpp,$(SYS_LIBS)))
+SYS_LIBS           := $(wildcard $(SYS_LIBS) $(addsuffix /utility,$(SYS_LIBS)))
+USER_LIBS          := $(wildcard $(USER_LIBS) $(addsuffix /utility,$(USER_LIBS)))
+SYS_INCLUDES        = $(patsubst %,-I%,$(SYS_LIBS))
+USER_INCLUDES       = $(patsubst %,-I%,$(USER_LIBS))
+LIB_C_SRCS          = $(wildcard $(patsubst %,%/*.c,$(SYS_LIBS)))
+LIB_CPP_SRCS        = $(wildcard $(patsubst %,%/*.cpp,$(SYS_LIBS)))
 USER_LIB_CPP_SRCS   = $(wildcard $(patsubst %,%/*.cpp,$(USER_LIBS)))
 USER_LIB_C_SRCS     = $(wildcard $(patsubst %,%/*.c,$(USER_LIBS)))
-LIB_OBJS      = $(patsubst $(ARDUINO_LIB_PATH)/%.c,$(OBJDIR)/libs/%.o,$(LIB_C_SRCS)) \
-        $(patsubst $(ARDUINO_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(LIB_CPP_SRCS))
-USER_LIB_OBJS = $(patsubst $(USER_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(USER_LIB_CPP_SRCS)) \
-        $(patsubst $(USER_LIB_PATH)/%.c,$(OBJDIR)/libs/%.o,$(USER_LIB_C_SRCS))
+LIB_OBJS            = $(patsubst $(ARDUINO_LIB_PATH)/%.c,$(OBJDIR)/libs/%.o,$(LIB_C_SRCS)) \
+                      $(patsubst $(ARDUINO_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(LIB_CPP_SRCS))
+USER_LIB_OBJS       = $(patsubst $(USER_LIB_PATH)/%.cpp,$(OBJDIR)/libs/%.o,$(USER_LIB_CPP_SRCS)) \
+                      $(patsubst $(USER_LIB_PATH)/%.c,$(OBJDIR)/libs/%.o,$(USER_LIB_C_SRCS))
 
 # Dependency files
-DEPS            = $(LOCAL_OBJS:.o=.d) $(LIB_OBJS:.o=.d) $(USER_LIB_OBJS:.o=.d) $(CORE_OBJS:.o=.d)
+DEPS                = $(LOCAL_OBJS:.o=.d) $(LIB_OBJS:.o=.d) $(USER_LIB_OBJS:.o=.d) $(CORE_OBJS:.o=.d)
 
 # Optimization level for the compiler.
 # You can get the list of options at http://www.nongnu.org/avr-libc/user-manual/using_tools.html#gcc_optO
@@ -756,6 +779,13 @@ ifndef OPTIMIZATION_LEVEL
 else
     $(call show_config_variable,OPTIMIZATION_LEVEL,[USER])
 endif
+
+ifndef DEBUG_FLAGS
+    DEBUG_FLAGS = -O0 -g
+endif
+
+# SoftwareSerial requires -Os (some delays are tuned for this optimization level)
+%SoftwareSerial.o : OPTIMIZATION_FLAGS = -Os
 
 ifndef MCU_FLAG_NAME
     MCU_FLAG_NAME = mmcu
@@ -771,10 +801,12 @@ CPPFLAGS      += -$(MCU_FLAG_NAME)=$(MCU) -DF_CPU=$(F_CPU) -DARDUINO=$(ARDUINO_V
         -fdata-sections
 
 ifdef DEBUG
-CPPFLAGS += -O0 -g
+OPTIMIZATION_FLAGS= $(DEBUG_FLAGS)
 else
-CPPFLAGS += -O$(OPTIMIZATION_LEVEL)
+OPTIMIZATION_FLAGS = -O$(OPTIMIZATION_LEVEL)
 endif
+
+CPPFLAGS += $(OPTIMIZATION_FLAGS)
 
 # USB IDs for the Caterina devices like leonardo or micro
 ifneq ($(CATERINA),)
@@ -790,7 +822,7 @@ endif
 
 CFLAGS        += $(EXTRA_FLAGS) $(EXTRA_CFLAGS)
 CXXFLAGS      += -fno-exceptions $(EXTRA_FLAGS) $(EXTRA_CXXFLAGS)
-ASFLAGS       += -$(MCU_FLAG_NAME)=$(MCU) -I. -x assembler-with-cpp
+ASFLAGS       += -x assembler-with-cpp
 LDFLAGS       += -$(MCU_FLAG_NAME)=$(MCU) -Wl,--gc-sections -O$(OPTIMIZATION_LEVEL) $(EXTRA_FLAGS) $(EXTRA_CXXFLAGS) $(EXTRA_LDFLAGS)
 SIZEFLAGS     ?= --mcu=$(MCU) -C
 
@@ -828,6 +860,14 @@ ifneq (,$(strip $(SYS_LIB_NAMES)))
     $(foreach lib,$(SYS_LIB_NAMES),$(call show_config_info,  $(lib),[SYSTEM]))
 endif
 
+# either calculate parent dir from arduino dir, or user-defined path
+ifndef BOOTLOADER_PARENT
+    BOOTLOADER_PARENT = $(ARDUINO_DIR)/hardware/arduino/bootloaders
+    $(call show_config_variable,BOOTLOADER_PARENT,[COMPUTED],(from ARDUINO_DIR))
+else
+    $(call show_config_variable,BOOTLOADER_PARENT,[USER])
+endif
+
 # end of config output
 $(call show_separator)
 
@@ -857,9 +897,9 @@ $(OBJDIR)/libs/%.o: $(USER_LIB_PATH)/%.c
 	$(CC) -MMD -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
 ifdef COMMON_DEPS
-    COMMON_DEPS := $(COMMON_DEPS) Makefile
+    COMMON_DEPS := $(COMMON_DEPS) $(MAKEFILE_LIST)
 else
-    COMMON_DEPS := Makefile
+    COMMON_DEPS := $(MAKEFILE_LIST)
 endif
 
 # normal local sources
@@ -891,7 +931,7 @@ $(OBJDIR)/%.o: %.pde $(COMMON_DEPS) | $(OBJDIR)
 # the ino -> o file
 $(OBJDIR)/%.o: %.ino $(COMMON_DEPS) | $(OBJDIR)
 	@$(MKDIR) $(dir $@)
-	$(CXX) -x c++ -include Arduino.h -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -x c++ -include $(ARDUINO_HEADER) -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 # generated assembly
 $(OBJDIR)/%.s: %.pde $(COMMON_DEPS) | $(OBJDIR)
@@ -900,7 +940,7 @@ $(OBJDIR)/%.s: %.pde $(COMMON_DEPS) | $(OBJDIR)
 
 $(OBJDIR)/%.s: %.ino $(COMMON_DEPS) | $(OBJDIR)
 	@$(MKDIR) $(dir $@)
-	$(CXX) -x c++ -include Arduino.h -MMD -S -fverbose-asm $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	$(CXX) -x c++ -include $(ARDUINO_HEADER) -MMD -S -fverbose-asm $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 #$(OBJDIR)/%.lst: $(OBJDIR)/%.s
 #	$(AS) -$(MCU_FLAG_NAME)=$(MCU) -alhnd $< > $@
@@ -914,16 +954,20 @@ $(OBJDIR)/%.o: $(ARDUINO_CORE_PATH)/%.cpp $(COMMON_DEPS) | $(OBJDIR)
 	@$(MKDIR) $(dir $@)
 	$(CXX) -MMD -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
+$(OBJDIR)/%.o: $(ARDUINO_CORE_PATH)/%.S $(COMMON_DEPS) | $(OBJDIR)
+	@$(MKDIR) $(dir $@)
+	$(CC) -MMD -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
+
 # various object conversions
 $(OBJDIR)/%.hex: $(OBJDIR)/%.elf $(COMMON_DEPS)
 	@$(MKDIR) $(dir $@)
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
-	@$(ECHO)
+	@$(ECHO) '\n'
 	$(call avr_size,$<,$@)
 ifneq ($(strip $(HEX_MAXIMUM_SIZE)),)
 	@if [ `$(SIZE) $@ | awk 'FNR == 2 {print $$2}'` -le $(HEX_MAXIMUM_SIZE) ]; then touch $@.sizeok; fi
 else
-	@$(ECHO) Maximum flash memory of $(BOARD_TAG) is not specified. Make sure the size of $@ is less than $(BOARD_TAG)\'s flash memory
+	@$(ECHO) "Maximum flash memory of $(BOARD_TAG) is not specified. Make sure the size of $@ is less than $(BOARD_TAG)\'s flash memory"
 	@touch $@.sizeok
 endif
 
@@ -941,17 +985,20 @@ $(OBJDIR)/%.sym: $(OBJDIR)/%.elf $(COMMON_DEPS)
 	$(NM) --size-sort --demangle --reverse-sort --line-numbers $< > $@
 
 ########################################################################
-#
 # Avrdude
+
 # If avrdude is installed separately, it can find its own config file
-#
 ifndef AVRDUDE
     AVRDUDE          = $(AVR_TOOLS_PATH)/avrdude
 endif
 
-# Default avrdude options. -V Do not verify, -q - suppress progress output
+# Default avrdude options
+# -V Do not verify
+# -q - suppress progress output
+# -D - Disable auto erase for flash memory 
+# (-D is needed for Mega boards. See https://github.com/sudar/Arduino-Makefile/issues/114#issuecomment-25011005)
 ifndef AVRDUDE_OPTS
-    AVRDUDE_OPTS = -q -V
+    AVRDUDE_OPTS = -q -V -D
 endif
 
 AVRDUDE_COM_OPTS = $(AVRDUDE_OPTS) -p $(MCU)
@@ -962,18 +1009,32 @@ endif
 AVRDUDE_ARD_OPTS = -c $(AVRDUDE_ARD_PROGRAMMER) -b $(AVRDUDE_ARD_BAUDRATE) -P $(call get_monitor_port)
 
 ifndef ISP_PROG
-    ISP_PROG   = stk500v1
+    ifneq ($(strip $(AVRDUDE_ARD_PROGRAMMER)),)
+        ISP_PROG = $(AVRDUDE_ARD_PROGRAMMER)
+    else
+        ISP_PROG = stk500v1
+    endif
 endif
 
 ifndef AVRDUDE_ISP_BAUDRATE
-    AVRDUDE_ISP_BAUDRATE = 19200
+    ifneq ($(strip $(AVRDUDE_ARD_BAUDRATE)),)
+        AVRDUDE_ISP_BAUDRATE = $(AVRDUDE_ARD_BAUDRATE)
+    else
+        AVRDUDE_ISP_BAUDRATE = 19200
+    endif
 endif
+
+# Fuse settings copied from Arduino IDE.
+# https://github.com/arduino/Arduino/blob/master/app/src/processing/app/debug/AvrdudeUploader.java#L254
 
 # Pre fuse settings
 ifndef AVRDUDE_ISP_FUSES_PRE
-
     ifneq ($(strip $(ISP_LOCK_FUSE_PRE)),)
         AVRDUDE_ISP_FUSES_PRE += -U lock:w:$(ISP_LOCK_FUSE_PRE):m
+    endif
+
+    ifneq ($(strip $(ISP_EXT_FUSE)),)
+        AVRDUDE_ISP_FUSES_PRE += -U efuse:w:$(ISP_EXT_FUSE):m
     endif
 
     ifneq ($(strip $(ISP_HIGH_FUSE)),)
@@ -983,11 +1044,15 @@ ifndef AVRDUDE_ISP_FUSES_PRE
     ifneq ($(strip $(ISP_LOW_FUSE)),)
         AVRDUDE_ISP_FUSES_PRE += -U lfuse:w:$(ISP_LOW_FUSE):m
     endif
+endif
 
-    ifneq ($(strip $(ISP_EXT_FUSE)),)
-        AVRDUDE_ISP_FUSES_PRE += -U efuse:w:$(ISP_EXT_FUSE):m
+# Bootloader file settings
+ifndef AVRDUDE_ISP_BURN_BOOTLOADER
+    ifneq ($(strip $(BOOTLOADER_PATH)),)
+        ifneq ($(strip $(BOOTLOADER_FILE)),)
+            AVRDUDE_ISP_BURN_BOOTLOADER += -U flash:w:$(BOOTLOADER_PARENT)/$(BOOTLOADER_PATH)/$(BOOTLOADER_FILE):i
+        endif
     endif
-
 endif
 
 # Post fuse settings
@@ -997,7 +1062,11 @@ ifndef AVRDUDE_ISP_FUSES_POST
     endif
 endif
 
-AVRDUDE_ISP_OPTS = -c $(ISP_PROG) -b $(AVRDUDE_ISP_BAUDRATE) -P $(call get_isp_port)
+AVRDUDE_ISP_OPTS = -c $(ISP_PROG) -b $(AVRDUDE_ISP_BAUDRATE)
+
+ifneq ($(strip $(ISP_PROG)),$(filter $(ISP_PROG), usbasp usbtiny))
+    AVRDUDE_ISP_OPTS += -P $(call get_isp_port)
+endif
 
 ifndef ISP_EEPROM
     ISP_EEPROM  = 0
@@ -1012,9 +1081,7 @@ ifneq ($(ISP_EEPROM), 0)
 endif
 
 ########################################################################
-#
 # Explicit targets start here
-#
 
 all: 		$(TARGET_EEP) $(TARGET_HEX)
 
@@ -1078,49 +1145,87 @@ reset_stty:
 		$$STTYF $(call get_monitor_port) -hupcl
 
 ispload:	$(TARGET_EEP) $(TARGET_HEX) verify_size
-ifdef AVRDUDE_ISP_FUSES_PRE
-		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) -e $(AVRDUDE_ISP_FUSES_PRE)
-endif
 		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) \
 			$(AVRDUDE_ISPLOAD_OPTS)
-ifdef AVRDUDE_ISP_FUSES_POST
+
+burn_bootloader:
+ifneq ($(strip $(AVRDUDE_ISP_FUSES_PRE)),)
+		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) -e $(AVRDUDE_ISP_FUSES_PRE)
+endif
+ifneq ($(strip $(AVRDUDE_ISP_BURN_BOOTLOADER)),)
+		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) $(AVRDUDE_ISP_BURN_BOOTLOADER)
+endif
+ifneq ($(strip $(AVRDUDE_ISP_FUSES_POST)),)
+		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) $(AVRDUDE_ISP_FUSES_POST)
+endif
+
+set_fuses:
+ifneq ($(strip $(AVRDUDE_ISP_FUSES_PRE)),)
+		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) -e $(AVRDUDE_ISP_FUSES_PRE)
+endif
+ifneq ($(strip $(AVRDUDE_ISP_FUSES_POST)),)
 		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ISP_OPTS) $(AVRDUDE_ISP_FUSES_POST)
 endif
 
 clean:
 		$(REMOVE) $(LOCAL_OBJS) $(CORE_OBJS) $(LIB_OBJS) $(CORE_LIB) $(TARGETS) $(DEPS) $(USER_LIB_OBJS) ${OBJDIR}
 
-size:		$(TARGET_HEX)
+size:	$(TARGET_HEX)
 		$(call avr_size,$(TARGET_ELF),$(TARGET_HEX))
 
 show_boards:
-	@cat $(BOARDS_TXT) | grep -E "^[[:alnum:]]" | cut -d . -f 1 | uniq
+		@cat $(BOARDS_TXT) | grep -E "^[[:alnum:]]" | cut -d . -f 1 | uniq
 
 monitor:
 		$(MONITOR_CMD) $(call get_monitor_port) $(MONITOR_BAUDRATE)
 
 disasm: $(OBJDIR)/$(TARGET).lss
-	@$(ECHO) The compiled ELF file has been disassembled to $(OBJDIR)/$(TARGET).lss
+		@$(ECHO) "The compiled ELF file has been disassembled to $(OBJDIR)/$(TARGET).lss"
 
 symbol_sizes: $(OBJDIR)/$(TARGET).sym
-	@$(ECHO) A symbol listing sorted by their size have been dumped to $(OBJDIR)/$(TARGET).sym
+		@$(ECHO) "A symbol listing sorted by their size have been dumped to $(OBJDIR)/$(TARGET).sym"
 
 verify_size:
 ifeq ($(strip $(HEX_MAXIMUM_SIZE)),)
-	@$(ECHO)
-	@$(ECHO) Maximum flash memory of $(BOARD_TAG) is not specified. Make sure the size of $(TARGET_HEX) is less than $(BOARD_TAG)\'s flash memory
-	@$(ECHO)
+	@$(ECHO) "\nMaximum flash memory of $(BOARD_TAG) is not specified. Make sure the size of $(TARGET_HEX) is less than $(BOARD_TAG)\'s flash memory\n\n"
 endif
 	@if [ ! -f $(TARGET_HEX).sizeok ]; then echo >&2 "\nThe size of the compiled binary file is greater than the $(BOARD_TAG)'s flash memory. \
 See http://www.arduino.cc/en/Guide/Troubleshooting#size for tips on reducing it."; false; fi
 
 generate_assembly: $(OBJDIR)/$(TARGET).s
-	@$(ECHO) Compiler-generated assembly for the main input source has been dumped to $(OBJDIR)/$(TARGET).s
+		@$(ECHO) "Compiler-generated assembly for the main input source has been dumped to $(OBJDIR)/$(TARGET).s"
 
 generated_assembly: generate_assembly
-	@$(ECHO) "generated_assembly" target is deprecated. Use "generate_assembly" target instead
+		@$(ECHO) "\"generated_assembly\" target is deprecated. Use \"generate_assembly\" target instead"
 
-.PHONY:	all upload raw_upload raw_eeprom error_on_caterina reset reset_stty ispload clean depends size show_boards monitor disasm symbol_sizes generated_assembly generate_assembly verify_size
+help:
+		@$(ECHO) "\nAvailable targets:\n\
+  make                  - no upload\n\
+  make upload           - upload\n\
+  make clean            - remove all our dependencies\n\
+  make depends          - update dependencies\n\
+  make reset            - reset the Arduino by tickling DTR on the serial port\n\
+  make raw_upload       - upload without first resetting\n\
+  make show_boards      - list all the boards defined in boards.txt\n\
+  make monitor          - connect to the Arduino's serial port\n\
+  make size             - show the size of the compiled output (relative to\n\
+                          resources, if you have a patched avr-size)\n\
+  make disasm           - generate a .lss file in build-cli that contains\n\
+                          disassembly of the compiled file interspersed\n\
+                          with your original source code.\n\
+  make verify_size      - Verify that the size of the final file is less than\n\
+                          the capacity of the micro controller.\n\
+  make eeprom           - upload the eep file\n\
+  make raw_eeprom       - upload the eep file without first resetting\n\
+  make burn_bootloader  - burn bootloader and fuses\n\
+  make set_fuses        - set fuses without burning bootloader\n\
+  make help             - show this help\n\
+"
+	@$(ECHO) "Please refer to $(ARDMK_FILE) for more details.\n"
+
+.PHONY: all upload raw_upload raw_eeprom error_on_caterina reset reset_stty ispload \
+        clean depends size show_boards monitor disasm symbol_sizes generated_assembly \
+        generate_assembly verify_size burn_bootloader help
 
 # added - in the beginning, so that we don't get an error if the file is not present
 -include $(DEPS)
