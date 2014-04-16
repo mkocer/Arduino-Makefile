@@ -27,23 +27,11 @@
 # The show_config_variable is unavailable before we include the common makefile,
 # so we defer logging the ARDMK_DIR info until it happens in Arduino.mk
 ifndef ARDMK_DIR
-    # presume it's a level above the path to our own file
-    ARDMK_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST))))/..)
+    # presume it's the same path to our own file
+    ARDMK_DIR := $(realpath $(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 endif
 
-ifndef ARDMK_PATH
-    ARDMK_PATH = $(ARDMK_DIR)/bin
-endif
-
-ifneq ($(wildcard $(ARDMK_DIR)/arduino-mk/Common.mk),)
-    # git checkout
-    include $(ARDMK_DIR)/arduino-mk/Common.mk
-else
-    ifneq ($(wildcard $(ARDMK_DIR)/Common.mk),) 
-        # package install
-        include $(ARDMK_DIR)/Common.mk
-    endif
-endif
+include $(ARDMK_DIR)/Common.mk
 
 ifndef MPIDE_DIR
     AUTO_MPIDE_DIR := $(firstword \
@@ -69,20 +57,17 @@ ifndef MPIDE_PREFERENCES_PATH
     endif
 endif
 
-
-AVR_TOOLS_DIR = $(ARDUINO_DIR)/hardware/pic32/compiler/pic32-tools
-
-# The same as in Arduino, the Linux distribution contains avrdude and
-# avrdude.conf in a different location.
+# The same as in Arduino, the Linux distribution contains avrdude and #
+# avrdude.conf in a different location, but for chipKIT it's even slightly
+# different than the Linux paths for Arduino, so we have to "double override".
 ifeq ($(CURRENT_OS),LINUX)
     AVRDUDE_DIR = $(ARDUINO_DIR)/hardware/tools
     AVRDUDE = $(AVRDUDE_DIR)/avrdude
     AVRDUDE_CONF = $(AVRDUDE_DIR)/avrdude.conf
-else
-    AVRDUDE_DIR = $(ARDUINO_DIR)/hardware/tools/avr
-    AVRDUDE = $(AVRDUDE_DIR)/bin/avrdude
-    AVRDUDE_CONF = $(AVRDUDE_DIR)/etc/avrdude.conf
 endif
+
+PIC32_TOOLS_DIR = $(ARDUINO_DIR)/hardware/pic32/compiler/pic32-tools
+PIC32_TOOLS_PATH = $(PIC32_TOOLS_DIR)/bin
 
 ALTERNATE_CORE = pic32
 ALTERNATE_CORE_PATH = $(MPIDE_DIR)/hardware/pic32
@@ -100,6 +85,17 @@ AR_NAME = pic32-ar
 OBJDUMP_NAME = pic32-objdump
 OBJCOPY_NAME = pic32-objcopy
 SIZE_NAME = pic32-size
+NM_NAME = pic32-nm
+
+OVERRIDE_EXECUTABLES = 1
+CC      = $(PIC32_TOOLS_PATH)/$(CC_NAME)
+CXX     = $(PIC32_TOOLS_PATH)/$(CXX_NAME)
+AS      = $(PIC32_TOOLS_PATH)/$(AS_NAME)
+OBJCOPY = $(PIC32_TOOLS_PATH)/$(OBJCOPY_NAME)
+OBJDUMP = $(PIC32_TOOLS_PATH)/$(OBJDUMP_NAME)
+AR      = $(PIC32_TOOLS_PATH)/$(AR_NAME)
+SIZE    = $(PIC32_TOOLS_PATH)/$(SIZE_NAME)
+NM      = $(PIC32_TOOLS_PATH)/$(NM_NAME)
 
 LDSCRIPT = $(call PARSE_BOARD,$(BOARD_TAG),ldscript)
 LDSCRIPT_FILE = $(ARDUINO_CORE_PATH)/$(LDSCRIPT)
@@ -110,4 +106,4 @@ LDFLAGS  += -T$(ARDUINO_CORE_PATH)/chipKIT-application-COMMON.ld
 CPPFLAGS += -mno-smart-io -fno-short-double
 CFLAGS_STD =
 
-include $(ARDMK_DIR)/arduino-mk/Arduino.mk
+include $(ARDMK_DIR)/Arduino.mk

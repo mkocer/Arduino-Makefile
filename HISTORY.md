@@ -4,6 +4,48 @@ A Makefile for Arduino Sketches
 The following is the rough list of changes that went into different versions.
 I tried to give credit whenever possible. If I have missed anyone, kindly add it to the list.
 
+### 1.3.4 (In development)
+- Tweak: Allow spaces in "Serial.begin (....)". (Issue #190) (https://github.com/pdav)
+
+### 1.3.3 (2014-04-12)
+- Fix: Make a new manpage for ard-reset-arduino. Fixes issue #188 (https://github.com/sej7278)
+
+### 1.3.2 (2014-04-11)
+- Fix: Add arduino-mk-vars.md file to RPM SPECfile. (https://github.com/sej7278)
+- Fix: Add avr-libc/malloc.c and realloc.c to included core files. Fixes issue #163 (https://github.com/sej7278)
+- Fix: Add "gpio" to the list of isp that don't have a port. (Issue #165, #166) (https://github.com/sej7278)
+- Fix: Add "-D__PROG_TYPES_COMPAT__" to the avr-g++ compiler flags to match IDE. (https://github.com/sej7278)
+- New: Create `Makefile-example-mk`, a *real life* `Makefile` example, to be used as a reference. (https://github.com/tinyladi)
+- Tweak: Add `OBJDIR` to `arduino-mk-vars.md` (https://github.com/tinyladi)
+- Tweak: *Beautify* `arduino-mk-vars.md` with code blocks. (https://github.com/tinyladi)
+- Fix: AVR tools paths for chipKIT in Linux. (https://github.com/peplin)
+- Fix: Consider usb or usb:... to be a valid ISP_PORT (https://github.com/geoffholden)
+- Add: Add phony target to run pre-build hook script (https://github.com/jrid)
+- Fix: Add BOOTLOADER_PARENT to `arduino-mk-vars.md` and fixed BOOTLOADER_PATH example. (https://github.com/sej7278)
+- Tweak: Replace perl reset script with Python script. (https://github.com/sej7278)
+- Tweak: Made choice of Python2/3 interpreter up to the OS. (https://github.com/peplin)
+- Tweak: Simplified packaging dependencies. (https://github.com/sej7278)
+- Tweak: Tweak AVRDUDE conf detection in windows. (https://github.com/EAGMnor)
+
+### 1.3.1 (2014-02-04)
+- Fix: BUNDLED_AVR_TOOLS_DIR is now set properly when using only arduino-core and not the whole arduino package. (https://github.com/sej7278)
+- New: Document all variables that can be overridden. (https://github.com/sej7278)
+- New: Add a new `help_vars` target to display information about variables that can be overridden.
+
+### 1.3.0 (2014-01-29)
+- Fix: Use more reliable serial device naming in Windows. Fix issue #139 and #155 (https://github.com/peplin)
+- Fix: Document that ARDUINO_DIR must be a relative path in Windows. Fix issue #156 (https://github.com/peplin)
+- Tweak: Don't hard code MONITOR_PORT in examples, for more flexible testing. (Issue #157) (https://github.com/peplin)
+- Tweak: Silence the stderr output from call to `which`. (Issue #158) (https://github.com/peplin)
+- Fix: Override complete compiler tool paths for chipKIT. (Issue #159) (https://github.com/peplin)
+- New: The makefile is compatible with Windows
+- New: Update `README.md` file about usage and Windows compatibility
+
+### 1.2.0 (2014-01-14)
+- Add: Add RPM SPECfile and new `package` directory to store package instructions and files (https://github.com/sej7278)
+- Fix: Remove use of arduino-mk subdirectory in git. Fix issue #151, #152 and #147 (https://github.com/sej7278)
+- Fix: Remove `arduino-mk` directory from all examples. Fix #154
+
 ### 1.1.0 (2013-12-26)
 - Don't append port details to avrdude for usbasp. See #123
 - Ignore commented lines while parsing boards.txt file. See #124
@@ -19,7 +61,7 @@ I tried to give credit whenever possible. If I have missed anyone, kindly add it
 - Fix: Handle relative paths of bootloader file while burning bootloaders. Fix #126 and #142 (https://github.com/sej7278)
 - New: Add `CONTRIBUTING.md` explaining how to contribute to the project.
 - New: Force -Os optimization for SoftwareSerial. Add `OPTIMIZATION_FLAGS` and `DEBUG_FLAGS`. (https://github.com/mahoy)
-- Fix: Use `ARDUINO_HEADER` variable instead of hardcoded file names. Fix #131 
+- Fix: Use `ARDUINO_HEADER` variable instead of hardcoded file names. Fix #131
 
 ### 1.0.1 (2013-09-25)
 - Unconditionally add -D in avrdude options. See #114
@@ -108,7 +150,7 @@ I tried to give credit whenever possible. If I have missed anyone, kindly add it
 
 ###   0.10 17.ix.12   M J Oldfield
 - Added installation notes for Fedora (ex Rickard Lindberg).
-- Changed size target so that it looks at the ELF object, 
+- Changed size target so that it looks at the ELF object,
     not the hexfile (ex Jared Szechy and Scott Howard).
 - Fixed ARDUNIO typo in README.md (ex Kalin Kozhuharov).
 - Tweaked OBJDIR handling (ex Matthias Urlichs and Scott Howard).
@@ -128,7 +170,7 @@ I tried to give credit whenever possible. If I have missed anyone, kindly add it
 - Autodetect ARDMK_DIR based on location of this file
 - Added support for utility directory within SYS and USER libraries
 
-### 0.9.3 13.vi.2012 
+### 0.9.3 13.vi.2012
 
 - Auto detect ARDUINO_DIR, Arduino version (https://github.com/rpavlik/)
 - Categorize libs into user and system (https://github.com/rpavlik/)
@@ -137,12 +179,12 @@ I tried to give credit whenever possible. If I have missed anyone, kindly add it
 - Changed bytes option for the head shell command, so that it works in Mac as well
 - Auto detect Serial Baud rate from sketch if possible
 
-### 0.9.2 06.vi.2012 
+### 0.9.2 06.vi.2012
 
 - Allow user to choose source files (LOCAL_*_SRCS flags) (https://github.com/Gaftech)
 - Modified "make size" behavior: using --mcu option and targeting .elf file instead of .hex file.(https://github.com/Gaftech)
 
-### 0.9.1 06.vi.2012 
+### 0.9.1 06.vi.2012
 
 - Corrected the ubuntu package names
 - Prevent the *file-not-found* error if the depends.mk file is not needed
