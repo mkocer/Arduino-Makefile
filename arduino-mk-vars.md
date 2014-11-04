@@ -111,6 +111,23 @@ ARDUINO_DIR = /Applications/Arduino.app/Contents/Resources/Java
 
 ----
 
+### ARDUINO_PLATFORM_LIB_PATH
+
+**Description:**
+
+Directory where the Arduino platform dependent libraries are stored.
+(Used only for Arduino 1.5.x)
+
+**Example:**
+
+```Makefile
+ARDUINO_PLATFORM_LIB_PATH = /usr/share/arduino/hardware/arduino/avr/libraries
+```
+
+**Requirement:** *Optional*
+
+----
+
 ### ARDUINO_VERSION
 
 **Description:**
@@ -129,7 +146,43 @@ ARDUINO_VERSION = 105
 
 ----
 
-### ARDUINO_VERSION
+### ARCHITECTURE
+
+**Description:**
+
+Architecture for Arduino 1.5
+
+Defaults to unset for 1.0 or `avr` for 1.5
+
+**Example:**
+
+```Makefile
+ARCHITECTURE = sam
+```
+
+**Requirement:** *Optional*
+
+----
+
+### VENDOR
+
+**Description:**
+
+Board vendor/maintainer.
+
+Defaults to `arduino`
+
+**Example:**
+
+```Makefile
+VENDOR = sparkfun
+```
+
+**Requirement:** *Optional*
+
+----
+
+### ARDUINO_SKETCHBOOK
 
 **Description:**
 
@@ -140,7 +193,7 @@ Usually can be auto-detected from the Arduino `preferences.txt` file or the defa
 **Example:**
 
 ```Makefile
-ARDUINO_VERSION = ~/sketches
+ARDUINO_SKETCHBOOK = ~/sketches
 ```
 
 **Requirement:** *Optional*
@@ -217,6 +270,26 @@ BOARD_TAG = uno or mega2560
 ```
 
 **Requirement:** *Mandatory*
+
+----
+
+### BOARD_SUB
+
+**Description:**
+
+1.5 submenu as listed in `boards.txt`
+
+**Example:**
+
+```Makefile
+# diecimila.name=Arduino Duemilanove or Diecimila
+BOARD_TAG=diecimila
+
+# diecimila.menu.cpu.atmega168=ATmega168
+BOARD_SUB=atmega168
+```
+
+**Requirement:** *Mandatory for 1.5 if using a submenu CPU*
 
 ----
 
@@ -726,14 +799,146 @@ OPTIMIZATION_LEVEL = 3
 
 **Description:**
 
-Flags to pass to the C compiler.
+Controls, *exclusively*, which C standard is to be used for compilation.
 
-Defaults to `-std=gnu99`
+Defaults to `undefined`
+
+Possible values:
+
+*	With `avr-gcc 4.3`, shipped with the Arduino IDE:
+	*	`undefined`
+	*	`-std=c99`
+	*	`-std=gnu89` - This is the default for C code
+	*	`-std=gnu99`
+*	With `avr-gcc 4.7, 4.8 or 4.9`, installed by you
+	*	`undefined`
+	*	`-std=c99`
+	*	`-std=c11`
+	*	`-std=gnu89` - This is the default for C code
+	*	`-std=gnu99`
+	*	`-std=gnu11`
+
+For more information, please refer to the [Options Controlling C Dialect](https://gcc.gnu.org/onlinedocs/gcc/C-Dialect-Options.html)
 
 **Example:**
 
 ```Makefile
-<unset as per chipKIT.mk>
+CFLAGS_STD = = -std=gnu89
+```
+
+**Requirement:** *Optional*
+
+----
+
+### CXXFLAGS_STD
+
+**Description:**
+
+Controls, *exclusively*, which C++ standard is to be used for compilation.
+
+Defaults to `undefined`
+
+Possible values:
+
+*	With `avr-gcc 4.3`, shipped with the Arduino IDE:
+	*	`undefined`
+	*	`-std=c++98`
+	*	`-std=c++0x`
+	*	`-std=gnu++98` - This is the default for C code
+	*	`-std=gnu++0x`
+*	With `avr-gcc 4.7, 4.8 or 4.9`, installed by you
+	*	`undefined`
+	*	`-std=c++98`
+	*	`-std=c++11`
+	*	`-std=c++1y`
+	*	`-std=c++14`
+	*	`-std=gnu++98` - This is the default for C++ code
+	*	`-std=gnu++11`
+	*	`-std=gnu++1y`
+	*	`-std=gnu++14`
+
+For more information, please refer to the [Options Controlling C Dialect](https://gcc.gnu.org/onlinedocs/gcc/C-Dialect-Options.html)
+
+**Example:**
+
+```Makefile
+CXXFLAGS_STD = = -std=gnu++98
+```
+
+**Requirement:** *Optional*
+
+----
+
+### CFLAGS
+
+**Description:**
+
+Flags passed to compiler for files compiled as C. Add more flags to this
+variable using `+=`.
+
+Defaults to all flags required for a typical build.
+
+**Example:**
+
+```Makefile
+CFLAGS += -my-c-only-flag
+```
+
+**Requirement:** *Optional*
+
+----
+
+### CXXFLAGS
+
+**Description:**
+
+Flags passed to the compiler for files compiled as C++. Add more flags to this
+variable using `+=`.
+
+Defaults to all flags required for a typical build.
+
+**Example:**
+
+```Makefile
+CXXFLAGS += -my-c++-onlyflag
+```
+
+**Requirement:** *Optional*
+
+----
+
+### ASFLAGS
+
+**Description:**
+
+Flags passed to compiler for files compiled as assembly (e.g. `.S` files). Add
+more flags to this variable using `+=`.
+
+Defaults to all flags required for a typical build.
+
+**Example:**
+
+```Makefile
+ASFLAGS += -my-as-only-flag
+```
+
+**Requirement:** *Optional*
+
+----
+
+### CPPFLAGS
+
+**Description:**
+
+Flags passed to the C pre-processor (for C, C++ and assembly source flies). Add
+more flags to this variable using `+=`.
+
+Defaults to all flags required for a typical build.
+
+**Example:**
+
+```Makefile
+CPPFLAGS += -DMY_DEFINE_FOR_ALL_SOURCE_TYPES
 ```
 
 **Requirement:** *Optional*
@@ -1029,6 +1234,8 @@ BOOTLOADER_FILE = optiboot_atmega328.hex
 Relative path to bootloader directory.
 
 Usually can be auto-detected as a relative `bootloader.path` from `boards.txt`
+
+Deprecated in 1.5, now part of bootloader.file
 
 **Example:**
 
